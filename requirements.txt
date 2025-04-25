@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+celery
+redis
+psycopg2-binary
+requests
+beautifulsoup4
+playwright
+python-dotenv

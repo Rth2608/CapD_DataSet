@@ -1,0 +1,52 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:15
+    container_name: stock_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  celery_worker:
+    build:
+      context: .
+    container_name: celery_worker
+    command: bash -c "PYTHONPATH=/code celery -A Crawler.crawl worker --loglevel=info"
+    volumes:
+      - .:/code
+    working_dir: /code
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      - redis
+      - db
+
+  celery_beat:
+    build:
+      context: .
+    container_name: celery_beat
+    command: bash -c "PYTHONPATH=/code celery -A Crawler.crawl beat --loglevel=info"
+    volumes:
+      - .:/code
+    working_dir: /code
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+
+
+volumes:
+  pg_data:
